@@ -24,8 +24,6 @@ vips = ["@MrZaos","@vanthucbk","@bibaoboi"]
 
 slack_client = WebClient(token=slack_bot_token)
 
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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";
-
 async def alert_mess_worker(queue: Queue, throttler: Throttler, client: TelegramClient, des):
     while True:
         try:
@@ -48,21 +46,21 @@ async def slack_alert_worker(queue: Queue, throttler:Throttler):
             async with throttler:
                 event =  await queue.get()
                 sender = await event.get_sender()
-                slack_data = {
-                    'text': sender.username + ': ' + event.message.message,       
-                    'blocks': [
-                        {
-                            "type": "divider"
-                        },
+                if event.message.message:
+                    blocks= [
                         {
                             "type": "section",
                             "text": {
                                 "type": "mrkdwn",
-                                "text": "*%s* - %s" % ( sender.username,event.message.message)
+                                "text": event.message.message
                             },
-                        },
-                ]}
-                requests.post(SLACK_WEBHOOK_URL, json=slack_data)
+                        }]
+                    slack_client.chat_postMessage(
+                        channel="C01STR8P9ST",
+                        text=(sender.username + ': ' + event.message.message),
+                        blocks=blocks,
+                        username=sender.username
+                    )
                 media = event.message.media
                 if media:
                     if type(media) == MessageMediaPhoto:
@@ -71,12 +69,13 @@ async def slack_alert_worker(queue: Queue, throttler:Throttler):
                             slack_client.files_upload(
                                 channels="C01STR8P9ST",
                                 file=img_save_path,
+                                initial_comment=sender.username
+                                
                             )
                         except SlackApiError as e:
                             logging.error(str(e), exc_info=True)
                         finally:
                             os.remove(img_save_path)
-                        
         except Exception as e:
             logging.error(str(e), exc_info=True)
 def run():
@@ -87,20 +86,13 @@ def run():
                 # asyncio.create_task(alert_mess_worker(queue, throttler, client,des=destination_channel))
                 asyncio.create_task(slack_alert_worker(queue, throttler))
                 await client.send_message(destination_channel, 'INIT - %s - %s' % (k2_group_id, '+'.join(vips)))
-                @client.on(events.NewMessage(chats=await client.get_entity(k2_group_id), from_users=vips))
+                @client.on(events.NewMessage(chats=k2_group_id, from_users=vips))
                 async def handler(event):
-                    # sender = await event.get_sender()
-                    # print(event.message.message)
-                    # event.message.message = sender.username + ': ' + event.message.message
                     queue.put_nowait(event)
-
                     # alert important
                     hour_tz = datetime.utcnow().hour + 9 
                     hour_tz = hour_tz - divmod(hour_tz,24)[0] * 24
                     if hour_tz >=0 and hour_tz <=9 and type(event.message.media) in [MessageMediaWebPage, MessageMediaPhoto]:
                         requests.get("https://vybit.net/trigger/vpgobhuhwbg4hk7u")
-
-                
-                    
                 await client.run_until_disconnected()
     asyncio.run(_run())
