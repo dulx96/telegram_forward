@@ -1,3 +1,4 @@
 .env
 name.session
 name.session-journal
+images/*

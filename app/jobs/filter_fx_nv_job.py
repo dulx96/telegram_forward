@@ -1,6 +1,7 @@
 import asyncio
 from telethon.sync import TelegramClient, events
 from telethon.errors.rpcerrorlist import FloodWaitError
+from telethon.tl.types import MessageMediaPhoto, MessageMediaWebPage
 import requests
 from datetime import datetime
 from asyncio import Queue
@@ -8,14 +9,20 @@ import random
 import logging
 from asyncio_throttle import Throttler
 import requests
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+import os
 
-from config import api_id, api_hash
+
+from config import api_id, api_hash, slack_bot_token
 destination_channel = 'https://t.me/joinchat/Hn89abajsihiM2Jl'
 # k2_group_id = 554909334 # * test fd
 k2_group_id = 1001387953586 # * k2 private ja vi
 # k2_group_id = 1001465965123 # * k2 general ja vi
 # vips = ["@dulx9666","https://t.me/dusub9666"]
 vips = ["@MrZaos","@vanthucbk","@bibaoboi"]
+
+slack_client = WebClient(token=slack_bot_token)
 
 SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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";
 
@@ -42,7 +49,7 @@ async def slack_alert_worker(queue: Queue, throttler:Throttler):
                 event =  await queue.get()
                 sender = await event.get_sender()
                 slack_data = {
-                    'text': event.message.message,       
+                    'text': sender.username + ': ' + event.message.message,       
                     'blocks': [
                         {
                             "type": "divider"
@@ -55,15 +62,21 @@ async def slack_alert_worker(queue: Queue, throttler:Throttler):
                             },
                         },
                 ]}
-                if event.message.media:
-                    slack_data['blocks'].append({
-                            "type": "section",
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": "has media"
-                            },
-                        })
                 requests.post(SLACK_WEBHOOK_URL, json=slack_data)
+                media = event.message.media
+                if media:
+                    if type(media) == MessageMediaPhoto:
+                        try:
+                            img_save_path = await event.download_media('images/')
+                            slack_client.files_upload(
+                                channels="C01STR8P9ST",
+                                file=img_save_path,
+                            )
+                        except SlackApiError as e:
+                            logging.error(str(e), exc_info=True)
+                        finally:
+                            os.remove(img_save_path)
+                        
         except Exception as e:
             logging.error(str(e), exc_info=True)
 def run():
@@ -73,18 +86,18 @@ def run():
                 throttler = Throttler(rate_limit=5, period=10)
                 # asyncio.create_task(alert_mess_worker(queue, throttler, client,des=destination_channel))
                 asyncio.create_task(slack_alert_worker(queue, throttler))
-                await client.send_message(destination_channel, 'INIT - %s - %s' % (k2_group_id, '+'.join(vips)))
+                # await client.send_message(destination_channel, 'INIT - %s - %s' % (k2_group_id, '+'.join(vips)))
                 @client.on(events.NewMessage(chats=await client.get_entity(k2_group_id), from_users=vips))
                 async def handler(event):
                     # sender = await event.get_sender()
-                    print(event.message.message)
+                    # print(event.message.message)
                     # event.message.message = sender.username + ': ' + event.message.message
                     queue.put_nowait(event)
 
                     # alert important
                     hour_tz = datetime.utcnow().hour + 9 
                     hour_tz = hour_tz - divmod(hour_tz,24)[0] * 24
-                    if hour_tz >=0 and hour_tz <=9 and event.message.media:
+                    if hour_tz >=0 and hour_tz <=9 and type(event.message.media) in [MessageMediaWebPage, MessageMediaPhoto]:
                         requests.get("https://vybit.net/trigger/vpgobhuhwbg4hk7u")
 
                 

@@ -11,6 +11,9 @@ typer = "^0.3.2"
 requests = "^2.25.1"
 asyncio-throttle = "^1.0.1"
 python-dotenv = "^0.17.0"
+PyYAML = "^5.4.1"
+slack-sdk = "^3.4.2"
+Pillow = "^8.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
