@@ -86,7 +86,7 @@ def run():
                 throttler = Throttler(rate_limit=5, period=10)
                 # asyncio.create_task(alert_mess_worker(queue, throttler, client,des=destination_channel))
                 asyncio.create_task(slack_alert_worker(queue, throttler))
-                # await client.send_message(destination_channel, 'INIT - %s - %s' % (k2_group_id, '+'.join(vips)))
+                await client.send_message(destination_channel, 'INIT - %s - %s' % (k2_group_id, '+'.join(vips)))
                 @client.on(events.NewMessage(chats=await client.get_entity(k2_group_id), from_users=vips))
                 async def handler(event):
                     # sender = await event.get_sender()
