@@ -8,7 +8,6 @@ from asyncio import Queue
 import random
 import logging
 from asyncio_throttle import Throttler
-import requests
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 import os
@@ -77,6 +76,10 @@ async def slack_alert_worker(queue: Queue, throttler:Throttler):
                         finally:
                             os.remove(img_save_path)
         except Exception as e:
+            slack_client.chat_postMessage(
+                    channel="C01STR8P9ST",
+                    text=('ERROR !!!\n' + str(e))
+            )
             logging.error(str(e), exc_info=True)
 def run():
     async def _run():
@@ -95,4 +98,9 @@ def run():
                     if hour_tz >=0 and hour_tz <=9 and type(event.message.media) in [MessageMediaWebPage, MessageMediaPhoto]:
                         requests.get("https://vybit.net/trigger/vpgobhuhwbg4hk7u")
                 await client.run_until_disconnected()
+                # * alert if disconnected
+                slack_client.chat_postMessage(
+                        channel="C01STR8P9ST",
+                        text=('DISCONNECTED !!!')
+                )
     asyncio.run(_run())
