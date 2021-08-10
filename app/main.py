@@ -1,5 +1,5 @@
 import typer
-from jobs import get_private_group_id_job, filter_fx_nv_job
+from jobs import get_private_group_id_job, filter_fx_nv_job, forward_bot
 
 app = typer.Typer()
 
@@ -10,6 +10,9 @@ def get_private_job_id(dialog_name: str):
 @app.command()
 def filter_fx_nv():
     filter_fx_nv_job.run()
+@app.command()
+def fw_bot():
+     forward_bot.run()
 
 if __name__ == "__main__":
     app()
