@@ -17,7 +17,7 @@ channels = [
 ]
 
 slack_client = WebClient(token=slack_bot_token)
-slack_channel = 'C02ALH35MJR'
+slack_channel = 'C02AS9TGZ6W'
 
 async def slack_alert_worker(queue: Queue, throttler:Throttler):
     while True:
